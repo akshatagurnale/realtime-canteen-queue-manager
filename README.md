@@ -21,6 +21,7 @@ A full-stack, real-time institutional canteen automation platform designed to se
 
 📂 Key Architecture Breakdown
 
+```text
 ├── app/
 │   ├── api/
 │   │   ├── orders/           # DB Order registration endpoints
