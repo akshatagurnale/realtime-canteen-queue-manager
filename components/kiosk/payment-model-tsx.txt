@@ -1,0 +1,212 @@
+'use client';
+
+import { useState } from 'react';
+import { X } from 'lucide-react';
+
+interface CartItem {
+  id: number;
+  name: string;
+  price: number;
+  quantity: number;
+}
+
+interface Props {
+  items: CartItem[];
+  totalAmount: number;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+export default function PaymentModal({ items, totalAmount, onClose, onSuccess }: Props) {
+  const [paymentMethod, setPaymentMethod] = useState<'online' | 'cash'>('online');
+  const [loading, setLoading] = useState(false);
+  const [orderData, setOrderData] = useState<any>(null);
+  const [receipt, setReceipt] = useState<string>('');
+
+  const handleOnlinePayment = async () => {
+    try {
+      setLoading(true);
+
+      // 1. First, create the real order in your DB exactly as before
+      const createOrderRes = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderItems: items,
+          paymentMethod: 'online',
+          customerName: 'Student',
+          customerEmail: '',
+          customerPhone: '',
+        }),
+      });
+
+      const orderResponse = await createOrderRes.json();
+      if (!orderResponse.success) throw new Error('Failed to create order');
+
+      const tokenNumber = orderResponse.order.tokenNumber;
+      setReceipt(orderResponse.receipt);
+
+      // 2. MOCK STEP: Instead of opening Razorpay, simulate network latency delay
+      // This lets your "Processing..." spinner run for 1.5 seconds to mimic a real gateway check!
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      // 3. Directly set the success data using your live DB token details
+      setOrderData({
+        tokenNumber,
+        message: 'Online Payment Successful (Mock Gateway Auth)!',
+      });
+
+    } catch (error) {
+      console.error('Payment error:', error);
+      alert('Mock Authorization Failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCashPayment = async () => {
+    try {
+      setLoading(true);
+
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderItems: items,
+          paymentMethod: 'cash',
+          customerName: 'Student',
+          customerEmail: '',
+          customerPhone: '',
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setReceipt(data.receipt);
+        setOrderData({
+          tokenNumber: data.order.tokenNumber,
+          message: 'Cash payment pending at reception',
+        });
+      }
+    } catch (error) {
+      console.error('Error creating cash order:', error);
+      alert('Failed to create order');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write('<pre>' + receipt + '</pre>');
+      printWindow.document.close();
+      printWindow.print();
+    }
+  };
+
+  // Success screen
+  if (orderData) {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4 text-center shadow-2xl">
+          <div className="mb-6">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-3xl text-green-600 font-bold">✓</span>
+            </div>
+            <h2 className="text-2xl font-bold text-foreground mb-2">{orderData.message}</h2>
+            <p className="text-4xl font-black text-blue-600 mb-4">#{orderData.tokenNumber}</p>
+            <p className="text-sm text-muted-foreground">Please collect your food when this token is announced</p>
+          </div>
+
+          <div className="space-y-3">
+            <button
+              onClick={handlePrint}
+              className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition"
+            >
+              Print Receipt
+            </button>
+            <button
+              onClick={() => {
+                onSuccess();
+                onClose();
+              }}
+              className="w-full bg-slate-100 text-slate-700 py-2.5 rounded-lg font-semibold hover:bg-slate-200 transition"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4 shadow-2xl">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-foreground">Payment Method</h2>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+            <X size={24} />
+          </button>
+        </div>
+
+        {/* Order Summary */}
+        <div className="bg-slate-50 border p-4 rounded-lg mb-6">
+          <div className="flex justify-between mb-2 text-sm">
+            <span className="text-muted-foreground">Items in Tray:</span>
+            <span className="font-semibold">{items.length}</span>
+          </div>
+          <div className="flex justify-between text-lg font-bold">
+            <span>Total:</span>
+            <span className="text-blue-600">₹{totalAmount.toFixed(2)}</span>
+          </div>
+        </div>
+
+        {/* Payment Method Selection */}
+        <div className="space-y-3 mb-6">
+          <label className="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-slate-50 transition">
+            <input
+              type="radio"
+              name="payment"
+              value="online"
+              checked={paymentMethod === 'online'}
+              onChange={(e) => setPaymentMethod(e.target.value as 'online' | 'cash')}
+              className="mr-3 accent-blue-600"
+            />
+            <span className="font-semibold text-foreground">Online Payment (Mock UPI Simulator)</span>
+          </label>
+
+          <label className="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-slate-50 transition">
+            <input
+              type="radio"
+              name="payment"
+              value="cash"
+              checked={paymentMethod === 'cash'}
+              onChange={(e) => setPaymentMethod(e.target.value as 'online' | 'cash')}
+              className="mr-3 accent-blue-600"
+            />
+            <span className="font-semibold text-foreground">Pay at Reception (Cash)</span>
+          </label>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="space-y-2">
+          <button
+            onClick={paymentMethod === 'online' ? handleOnlinePayment : handleCashPayment}
+            disabled={loading}
+            className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50 transition shadow-md"
+          >
+            {loading ? 'Processing Transaction...' : `Proceed with ${paymentMethod === 'online' ? 'Online' : 'Cash'} Payment`}
+          </button>
+          <button
+            onClick={onClose}
+            className="w-full bg-slate-100 text-slate-700 py-3 rounded-lg font-semibold hover:bg-slate-200 transition"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
