@@ -22,12 +22,14 @@ A full-stack, real-time institutional canteen automation platform designed to se
 📂 Key Architecture Breakdown
 
 ```text
-├── app/
-│   ├── api/
-│   │   ├── orders/           # DB Order registration endpoints
-│   │   └── payment/          # Mock payment processing gateway handler
-│   └── page.tsx              # Main kiosk screen
-├── components/
-│   └── PaymentModal.tsx      # Payment strategy router component
-├── public/                   # Static application assets
-└── README.md                 # Project system documentation
+├── app/                  # Next.js App Router (Pages & API routes)
+│   ├── admin/            # Admin dashboard and login
+│   ├── api/              # Backend route handlers (orders, payments, etc.)
+│   ├── kiosk/            # Student ordering interface
+│   └── kitchen/          # Kitchen display & order management
+├── components/           # Reusable React components
+│   ├── admin/            # Admin-specific logic
+│   ├── kiosk/            # Ordering & payment logic
+│   └── ui/               # Shadcn/UI component library
+├── lib/                  # Utility functions & Supabase clients
+└── styles/               # Global CSS
